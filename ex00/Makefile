@@ -1,7 +1,7 @@
 NAME	=	sc
 
 CC		=	c++
-CFLAGS	=	-std=c++17 -Wall -Wextra -Werror -g
+CFLAGS	=	-std=c++17 -Wall -Wextra -Werror
 
 SRCDIR	=	src
 OBJDIR	=	obj

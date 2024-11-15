@@ -19,6 +19,7 @@
 #define _INT	1
 #define _FLOAT	2
 #define _DOUBLE	3
+#define _NONE	4
 
 #define isascii(x)	(x >= 0x0 && x <= 0x7F)
 
@@ -27,6 +28,8 @@
 #define _val(n, t)	(static_cast<t>(n))
 
 static inline uint8_t	_getType(const std::string &lit);
+static inline uint8_t	_isFloat(const std::string &lit);
+static inline uint8_t	_isDouble(const std::string &lit);
 
 void	ScalarConverter::convert(const std::string &lit)
 {
@@ -119,6 +122,8 @@ void	ScalarConverter::convert(const std::string &lit)
 			}
 			std::cout << "double : " << dval << _zero(dval) << "\n";
 			break ;
+		case _NONE:
+			std::cout << "sc: invalid literal " << lit << "\n";
 	}
 }
 
@@ -130,7 +135,41 @@ static inline uint8_t	_getType(const std::string &lit)
 		return _INT;
 	if (lit == "inf" || lit == "+inf" || lit == "-inf")
 		return _DOUBLE;
-	if (lit.back() == 'f')
+	if (_isFloat(lit))
 		return _FLOAT;
-	return _DOUBLE;
+	return (_isDouble(lit)) ? _DOUBLE : _NONE;
+}
+
+static inline uint8_t	_isFloat(const std::string &lit)
+{
+	size_t	i;
+
+	if (lit == "inff" || lit == "+inff" || lit == "-inff")
+		return 1;
+	if (!std::isdigit(lit.at(0)))
+		return 0;
+	i = lit.find_first_of(".");
+	if (i == std::string::npos)
+		return 0;
+	if (!std::isdigit(lit.at(i + 1)))
+		return 0;
+	if (lit.find_first_of("f") != lit.length())
+		return 0;
+	return 1;
+}
+
+static inline uint8_t	_isDouble(const std::string &lit)
+{
+	size_t	i;
+
+	if (lit == "inf" || lit == "+inf" || lit == "-inf" || lit == "nan")
+		return 1;
+	if (!std::isdigit(lit.at(0)))
+		return 0;
+	i = lit.find_first_of(".");
+	if (i == std::string::npos)
+		return 0;
+	if (!std::isdigit(lit.at(i + 1)))
+		return 0;
+	return 1;
 }
