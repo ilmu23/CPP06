@@ -59,7 +59,7 @@ void	ScalarConverter::convert(const std::string &lit)
 			cval = (isascii(ival)) ? static_cast<char>(ival) : 0;
 			fval = static_cast<float>(ival);
 			dval = static_cast<double>(ival);
-			if (cval)
+			if (std::isprint(cval))
 				std::cout << "char   : '" << cval << "'\n";
 			else
 				std::cout << "char   : not applicable\n";
@@ -78,7 +78,7 @@ void	ScalarConverter::convert(const std::string &lit)
 				&& fval >= _val(std::numeric_limits<int>::min(), float)) {
 				ival = static_cast<int>(std::roundf(fval));
 				cval = (isascii(ival)) ? static_cast<char>(std::roundf(fval)) : 0;
-				if (cval)
+				if (std::isprint(cval))
 					std::cout << "char   : '" << cval << "'\n";
 				else
 					std::cout << "char   : not applicable\n";
@@ -105,7 +105,7 @@ void	ScalarConverter::convert(const std::string &lit)
 					&& dval >= _val(std::numeric_limits<int>::min(), double)) {
 					ival = static_cast<int>(std::roundf(dval));
 					cval = (isascii(ival)) ? static_cast<char>(std::roundf(dval)) : 0;
-					if (cval)
+					if (std::isprint(cval))
 						std::cout << "char   : '" << cval << "'\n";
 					else
 						std::cout << "char   : not applicable\n";
