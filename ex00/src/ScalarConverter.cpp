@@ -8,10 +8,10 @@
 // <<ScalarConverter.cpp>>
 
 #include <cmath>
+#include <regex>
 #include <cctype>
 #include <limits>
 #include <cstdint>
-#include <iomanip>
 #include <iostream>
 #include "ScalarConverter.hpp"
 
@@ -21,155 +21,130 @@
 #define _DOUBLE	3
 #define _NONE	4
 
-#define isascii(x)	(x >= 0x0 && x <= 0x7F)
+#define _INT_MIN	std::numeric_limits<int>::min()
+#define _INT_MAX	std::numeric_limits<int>::max()
+#define _FLT_MIN	std::numeric_limits<float>::min()
+#define _FLT_MAX	std::numeric_limits<float>::max()
+
+#define isascii(x)			(x >= 0x0 && x <= 0x7F)
+#define inrange(m, x, y)	(n >= x && n <= y)
 
 #define _zero(n)	((!std::isnan(n) && !std::isinf(n) && n == std::round(n)) ? ".0" : "")
 
 #define _val(n, t)	(static_cast<t>(n))
 
 static inline uint8_t	_getType(const std::string &lit);
-static inline uint8_t	_isFloat(const std::string &lit);
-static inline uint8_t	_isDouble(const std::string &lit);
+static inline void		_pchr(const char &c);
+static inline void		_pint(const int &n);
+static inline void		_pflt(const float &n);
+static inline void		_pdbl(const double &n);
 
 void	ScalarConverter::convert(const std::string &lit)
 {
-	char	cval;
-	int		ival;
-	float	fval;
-	double	dval;
-
 	switch (_getType(lit)) {
 		case _CHAR:
-			cval = static_cast<char>(lit.front());
-			ival = static_cast<int>(cval);
-			fval = static_cast<float>(cval);
-			dval = static_cast<double>(cval);
-			std::cout << "char   : '" << cval << "'\n";
-			std::cout << "int    : " << ival << "\n";
-			std::cout << "float  : " << fval << _zero(fval) << "f\n";
-			std::cout << "double : " << dval << _zero(dval) << "\n";
+			_pchr((lit.length() == 1) ? lit.at(0) : lit.at(1));
 			break ;
 		case _INT:
 			try {
-				ival = std::stoi(lit);
+				_pint(std::stoi(lit));
 			} catch (std::exception &e) {
 				std::cout << "sc: literal " << lit << " outside of 32-bit int range\n";
-				break ;
 			}
-			cval = (isascii(ival)) ? static_cast<char>(ival) : 0;
-			fval = static_cast<float>(ival);
-			dval = static_cast<double>(ival);
-			if (std::isprint(cval))
-				std::cout << "char   : '" << cval << "'\n";
-			else
-				std::cout << "char   : not applicable\n";
-			std::cout << "int    : " << ival << "\n";
-			std::cout << "float  : " << fval << _zero(fval) << "f\n";
-			std::cout << "double : " << dval << _zero(dval) << "\n";
 			break ;
 		case _FLOAT:
 			try {
-				fval = std::stof(lit);
+				_pflt(std::stof(lit));
 			} catch (std::exception &e) {
 				std::cout << "sc: literal " << lit << " outside of float range\n";
-				break ;
 			}
-			if (fval <= _val(std::numeric_limits<int>::max(), float)
-				&& fval >= _val(std::numeric_limits<int>::min(), float)) {
-				ival = static_cast<int>(std::roundf(fval));
-				cval = (isascii(ival)) ? static_cast<char>(std::roundf(fval)) : 0;
-				if (std::isprint(cval))
-					std::cout << "char   : '" << cval << "'\n";
-				else
-					std::cout << "char   : not applicable\n";
-				std::cout << "int    : " << ival << "\n";
-			} else {
-				std::cout << "char   : not applicable\n";
-				std::cout << "int    : not applicable\n";
-			}
-			dval = static_cast<double>(fval);
-			std::cout << "float  : " << fval << _zero(fval) << "f\n";
-			std::cout << "double : " << dval << _zero(dval) << "\n";
 			break ;
 		case _DOUBLE:
 			try {
-				dval = std::stod(lit);
+				_pdbl(std::stod(lit));
 			} catch (std::exception &e) {
 				std::cout << "sc: literal " << lit << " outside of double range\n";
-				break ;
 			}
-			if (dval <= _val(std::numeric_limits<float>::max(), double)
-				&& dval >= _val(std::numeric_limits<float>::min(), double)) {
-				fval = static_cast<float>(dval);
-				if (dval <= _val(std::numeric_limits<int>::max(), double)
-					&& dval >= _val(std::numeric_limits<int>::min(), double)) {
-					ival = static_cast<int>(std::roundf(dval));
-					cval = (isascii(ival)) ? static_cast<char>(std::roundf(dval)) : 0;
-					if (std::isprint(cval))
-						std::cout << "char   : '" << cval << "'\n";
-					else
-						std::cout << "char   : not applicable\n";
-					std::cout << "int    : " << ival << "\n";
-				} else {
-					std::cout << "char   : not applicable\n";
-					std::cout << "int    : not applicable\n";
-				}
-				std::cout << "float  : " << fval << _zero(fval) << "f\n";
-			} else {
-				std::cout << "char   : not applicable\n";
-				std::cout << "int    : not applicable\n";
-				std::cout << "float  : not applicable\n";
-			}
-			std::cout << "double : " << dval << _zero(dval) << "\n";
 			break ;
-		case _NONE:
+		default:
 			std::cout << "sc: invalid literal " << lit << "\n";
 	}
 }
 
 static inline uint8_t	_getType(const std::string &lit)
 {
-	if (lit.length() == 1 && !std::isdigit(lit.at(0)))
+	std::regex	rchr("^[^0-9]$|^'.'$");
+	std::regex	rint("^[0-9]+$");
+	std::regex	rflt("^[0-9]+\\.[0-9]*f$");
+	std::regex	rdbl("^[0-9]+\\.[0-9]*$");
+
+	if (std::regex_match(lit, rchr))
 		return _CHAR;
-	if (lit.find_first_not_of("0123456789") == std::string::npos)
+	if (std::regex_match(lit, rint))
 		return _INT;
-	if (lit == "inf" || lit == "+inf" || lit == "-inf")
-		return _DOUBLE;
-	if (_isFloat(lit))
+	if (lit == "inff" || lit == "+inff" || lit == "-inff" || std::regex_match(lit, rflt))
 		return _FLOAT;
-	return (_isDouble(lit)) ? _DOUBLE : _NONE;
+	if (lit == "inf" || lit == "+inf" || lit == "-inf" || lit == "nan" || std::regex_match(lit, rdbl))
+		return _DOUBLE;
+	return _NONE;
 }
 
-static inline uint8_t	_isFloat(const std::string &lit)
+static inline void	_pchr(const char &c)
 {
-	size_t	i;
-
-	if (lit == "inff" || lit == "+inff" || lit == "-inff")
-		return 1;
-	if (!std::isdigit(lit.at(0)))
-		return 0;
-	i = lit.find_first_of(".");
-	if (i == std::string::npos)
-		return 0;
-	if (!std::isdigit(lit.at(i + 1)))
-		return 0;
-	if (lit.find_first_of("f") != lit.length())
-		return 0;
-	return 1;
+	std::cout << "char   : '" << c << "'\n";
+	std::cout << "int    : " << _val(c, int) << "\n";
+	std::cout << "float  : " << _val(c, float) << _zero(_val(c, float)) << "\n";
+	std::cout << "double : " << _val(c, double) << _zero(_val(c, double)) << "\n";
 }
 
-static inline uint8_t	_isDouble(const std::string &lit)
+static inline void	_pint(const int &n)
 {
-	size_t	i;
+	if (isascii(n) && std::isprint(n))
+		std::cout << "char   : '" << _val(n, char) << "'\n";
+	else
+		std::cout << "char   : not applicable\n";
+	std::cout << "int    : " << n << "\n";
+	std::cout << "float  : " << _val(n, float) << _zero(_val(n, float)) << "\n";
+	std::cout << "double : " << _val(n, double) << _zero(_val(n, double)) << "\n";
+}
 
-	if (lit == "inf" || lit == "+inf" || lit == "-inf" || lit == "nan")
-		return 1;
-	if (!std::isdigit(lit.at(0)))
-		return 0;
-	i = lit.find_first_of(".");
-	if (i == std::string::npos)
-		return 0;
-	if (!std::isdigit(lit.at(i + 1)))
-		return 0;
-	return 1;
+static inline void	_pflt(const float &n)
+{
+	int	_n;
+
+	if (inrange(n, _val(_INT_MIN, float), _val(_INT_MAX, float))) {
+		_n = static_cast<int>(std::roundf(n));
+		if (isascii(_n) && std::isprint(_n))
+			std::cout << "char   : '" << _val(_n, char) << "'\n";
+		else
+			std::cout << "char   : not applicable\n";
+		std::cout << "int    : " << _n << "\n";
+	} else {
+		std::cout << "char   : not applicable\n";
+		std::cout << "int    : not applicable\n";
+	}
+	std::cout << "float  : " << n << _zero(n) << "f\n";
+	std::cout << "double : " << _val(n, double) << _zero(_val(n, double)) << "\n";
+}
+
+static inline void	_pdbl(const double &n)
+{
+	int	_n;
+
+	if (inrange(n, _val(_INT_MIN, double), _val(_INT_MAX, double))) {
+		_n = static_cast<int>(std::round(n));
+		if (isascii(_n) && std::isprint(_n))
+			std::cout << "char   : '" << _val(_n, char) << "'\n";
+		else
+			std::cout << "char   : not applicable\n";
+		std::cout << "int    : " << _n << "\n";
+	} else {
+		std::cout << "char   : not applicable\n";
+		std::cout << "int    : not applicable\n";
+	}
+	if (inrange(n, _val(_FLT_MIN, double), _val(_FLT_MAX, double)))
+		std::cout << "float  : " << _val(n, float) << _zero(_val(n, float)) << "f\n";
+	else
+		std::cout << "float  : not applicable\n";
+	std::cout << "double : " << n << _zero(n) << "\n";
 }
